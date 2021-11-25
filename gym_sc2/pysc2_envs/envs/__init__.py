@@ -1,2 +1,1 @@
-from customized_env.envs.customized_env1 import Customized_Env1
-from customized_env.envs.customized_env2 import Customized_Env2
+from pysc2_envs.envs.defeat_zerglings_banelings_env import DZBEnv

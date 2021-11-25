@@ -1,3 +1,4 @@
+from typing import AsyncIterable
 import gym
 from gym import spaces
 from pysc2.env import sc2_env
@@ -13,15 +14,27 @@ logger = logging.getLogger(__name__)
 class DZBEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    default_settings = {
-    'map_name': "DefeatZerglingsAndBanelings",
-    'players': [sc2_env.Agent(sc2_env.Race.terran),
-                sc2_env.Bot(sc2_env.Race.zerg, sc2_env.Difficulty.hard)],
+    '''
     'agent_interface_format': features.AgentInterfaceFormat(
                 action_space=actions.ActionSpace.RAW,
                 use_raw_units=True,
                 raw_resolution=64),
-    'realtime': True
+    '''
+
+    default_settings = {
+    'map_name': "DefeatZerglingsAndBanelings",
+    'players': [sc2_env.Agent(sc2_env.Race.terran),
+                sc2_env.Bot(sc2_env.Race.zerg, sc2_env.Difficulty.hard)],
+    'agent_interface_format': sc2_env.parse_agent_interface_format(
+        feature_screen=84,
+        feature_minimap=64,
+        rgb_screen=None,
+        rgb_minimap=None,
+        action_space=None,
+        use_feature_units=False,
+        use_raw_units=False),
+    'realtime': True,
+    'visualize': True,
     }
 
     def __init__(self, **kwargs):
@@ -39,14 +52,14 @@ class DZBEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=64,
-            shape=(19,3)
+            shape=(1,7056)
         )
 
     def step(self, action):
         raw_obs = self.take_action(action) # take safe action
+        obs = self.get_obs(raw_obs)
         reward = raw_obs.reward # get reward from the env
-        obs = self.get_derived_obs(raw_obs) # get derived observation
-        return obs, reward, raw_obs.last(), {}  # return obs, reward and whether episode ends
+        return obs, reward, False, {}  # return obs, reward and whether episode ends
 
     def reset(self):
         if self.env is None:
@@ -55,7 +68,11 @@ class DZBEnv(gym.Env):
         self.banelings = []
         self.zerglings = []
         raw_obs = self.env.reset()[0]
-        return self.get_derived_obs(raw_obs)
+        return self.get_obs(raw_obs) , raw_obs.reward, False, {}
+
+    def get_obs(self, raw_obs):
+        obs = raw_obs.observation["feature_screen"][5]
+        return obs
 
     def close(self):
         if self.env is not None:
@@ -67,12 +84,17 @@ class DZBEnv(gym.Env):
 
     """ HELPER FUNCTIONS BELOW """
 
+    def save_replay(self, replay_dir, prefix=None):
+        replay_path = self.env.save_replay(replay_dir, prefix=prefix)
+        return replay_path
+
     def init_env(self):
         """Used in self.reset()"""
         args = {**self.default_settings, **self.kwargs}
-        self.env =  sc2_env.SC2Env(**args)
+        self.env = sc2_env.SC2Env(**args)
 
     def get_derived_obs(self, raw_obs):
+        print(raw_obs)
         """Used in self.reset() and self.step()"""
         obs = np.zeros((19,3), dtype=np.uint8)
         # 1 indicates my own unit, 4 indicates enemy's
