@@ -22,7 +22,7 @@ class DZBEnv(gym.Env):
     '''
 
     default_settings = {
-    'map_name': "DefeatZerglingsAndBanelings",
+    'map_name': "CollectMineralShards",
     'players': [sc2_env.Agent(sc2_env.Race.terran),
                 sc2_env.Bot(sc2_env.Race.zerg, sc2_env.Difficulty.hard)],
     'agent_interface_format': sc2_env.parse_agent_interface_format(
@@ -33,46 +33,62 @@ class DZBEnv(gym.Env):
         action_space=None,
         use_feature_units=False,
         use_raw_units=False),
-    'realtime': True,
-    'visualize': True,
+    'realtime': False,
+    #'visualize': True,
     }
 
     def __init__(self, **kwargs):
         super().__init__()
         self.kwargs = kwargs
         self.env = None
-        self.marines = []
-        self.banelings = []
-        self.zerglings = []
         # 0 no operation
         # 1~32 move
         # 33~122 attack
-        self.action_space = spaces.Discrete(123)
+        self.action_space = spaces.Box(low=1.0, high=84.0, shape=(2,), dtype=np.float32) # Coordinates of Attack
         # [0: x, 1: y, 2: hp]
+        self.image_shape = (1, 84, 84)
         self.observation_space = spaces.Box(
             low=0,
-            high=64,
-            shape=(1,7056)
+            high=255,
+            shape=self.image_shape
         )
+        self.num_steps = 0
+        self.available_actions = None
 
-    def step(self, action):
-        raw_obs = self.take_action(action) # take safe action
-        obs = self.get_obs(raw_obs)
-        reward = raw_obs.reward # get reward from the env
-        return obs, reward, False, {}  # return obs, reward and whether episode ends
+    def step(self, action, args=None):
+        #raw_obs = self.take_action(actions.FunctionCall(actions.FUNCTIONS.select_army.id, [[0]])) # take safe action
+        if len(self.available_actions) and actions.FUNCTIONS.Attack_screen.id in self.available_actions:
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.Attack_screen.id, [[0],[action[0],action[1]]])])
+        else:
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
+        raw_obs = raw_obs[0]
+        self.num_steps += 1
+        self.available_actions = None if "available_actions" not in raw_obs.observation.keys() else raw_obs.observation["available_actions"]
+
+        done = False
+        if self.num_steps == 50:
+            obs = self.reset()
+            done = True
+
+        return self.get_obs(raw_obs), raw_obs.reward, done, {}  # return obs, reward and whether episode ends
 
     def reset(self):
         if self.env is None:
             self.init_env()
-        self.marines = []
-        self.banelings = []
-        self.zerglings = []
-        raw_obs = self.env.reset()[0]
-        return self.get_obs(raw_obs) , raw_obs.reward, False, {}
+
+        raw_obs = self.env.reset()[0] # 0-indexed because raw_obs is tuple for no reason
+        self.available_actions = raw_obs.observation["available_actions"]
+        self.num_steps = 0
+        '''
+        for action in raw_obs.observation.available_actions:
+            print(actions.FUNCTIONS[action])
+        print("@@@")
+        '''
+        return self.get_obs(raw_obs)
 
     def get_obs(self, raw_obs):
         obs = raw_obs.observation["feature_screen"][5]
-        return obs
+        return np.reshape(obs, self.image_shape)
 
     def close(self):
         if self.env is not None:
@@ -94,7 +110,6 @@ class DZBEnv(gym.Env):
         self.env = sc2_env.SC2Env(**args)
 
     def get_derived_obs(self, raw_obs):
-        print(raw_obs)
         """Used in self.reset() and self.step()"""
         obs = np.zeros((19,3), dtype=np.uint8)
         # 1 indicates my own unit, 4 indicates enemy's
@@ -138,7 +153,7 @@ class DZBEnv(gym.Env):
             aidx = (action-33)%9
             action_mapped = self.attack(aidx, eidx)
         # execute action
-        raw_obs = self.env.step([action_mapped])[0]
+        raw_obs = self.env.step([action_mapped])
         return raw_obs
 
     def move_up(self, idx):
