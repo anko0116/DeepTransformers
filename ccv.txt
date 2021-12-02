@@ -20,5 +20,3 @@ viewer.cam.distance = distance of the camera from where the camera is looking at
 singularity shell --nv -B /gpfs/data/ugur/hahn:/gpfs/data/ugur/hahn /gpfs/data/ugur/amir/containers/CSCI2951F.simg
 
 singularity shell --nv -B /gpfs/data/ugur/hahn:/gpfs/data/ugur/hahn /gpfs/data/ugur/CSCI2951F.simg
-
-sameer@kaisura.com
