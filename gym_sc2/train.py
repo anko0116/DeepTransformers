@@ -76,32 +76,35 @@ if __name__ == '__main__':
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      net_arch=[256, 256])
     '''
-    model = A2C('CnnPolicy', env, verbose=0, tensorboard_log="log/", n_steps=5, learning_rate=0.0001, policy_kwargs=policy_kwargs)
-    model.learn(total_timesteps=int(100000), tb_log_name="first_run")
+    model = A2C('CnnPolicy', env, verbose=0, tensorboard_log="log/", n_steps=20, learning_rate=0.0001, policy_kwargs=policy_kwargs)
+    model.learn(total_timesteps=int(200000), tb_log_name="first_run")
     print("Training finished")
 
 
     # Save model
     if not os.path.exists("./model"):
         os.makedirs("./model")
-    model.save("model/dbz_ppo")
+    model.save("model/dbz_a2c_cnn_drpout_batchnorm")
 
+    all_rewards = []
+    for i in range(10):
+        # Test model for 1 episode
+        model.load("model/dbz_ppo")
+        env = gym.make('defeat-zerglings-banelings-v0')
+        obs = env.reset()
+        done = False
 
-    # Test model for 1 episode
-    model.load("model/dbz_ppo")
-    env = gym.make('defeat-zerglings-banelings-v0')
-    obs = env.reset()
-    done = False
-
-    total_reward = 0
-    while not done:
-        #action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
-        action, _state = model.predict(np.array(obs))
-        obs, reward, done, info = env.step(action)
-        total_reward += reward
-        env.render()
-        print(action, reward)
-    print(total_reward)
+        total_reward = 0
+        while not done:
+            #action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
+            action, _state = model.predict(np.array(obs))
+            obs, reward, done, info = env.step(action)
+            total_reward += reward
+            
+            print(action, reward)
+        print(total_reward)
+        all_rewards.append(total_reward)
+    print(all_rewards)
 
     # How to view tensorboard
     # tensorboard --logdir=log/first_run_1/
