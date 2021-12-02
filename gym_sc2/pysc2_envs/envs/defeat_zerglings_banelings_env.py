@@ -34,19 +34,19 @@ class DZBEnv(gym.Env):
         use_feature_units=False,
         use_raw_units=False),
     'realtime': False,
-    #'visualize': True,
+    'visualize': False,
+    'disable_fog': True,
     }
 
     def __init__(self, **kwargs):
         super().__init__()
         self.kwargs = kwargs
         self.env = None
-        # 0 no operation
-        # 1~32 move
-        # 33~122 attack
-        self.action_space = spaces.Box(low=1.0, high=84.0, shape=(2,), dtype=np.float32) # Coordinates of Attack
+        #self.action_space = spaces.Box(low=1.0, high=84.0, shape=(2,), dtype=np.float32) # Coordinates of Attack
+        self.action_space = spaces.MultiDiscrete([83,83])
         # [0: x, 1: y, 2: hp]
-        self.image_shape = (1, 84, 84)
+        #self.image_shape = (1, 84, 84) # for CNN
+        self.image_shape = (1, 7056) # for MLP
         self.observation_space = spaces.Box(
             low=0,
             high=255,
@@ -59,6 +59,10 @@ class DZBEnv(gym.Env):
         #raw_obs = self.take_action(actions.FunctionCall(actions.FUNCTIONS.select_army.id, [[0]])) # take safe action
         if len(self.available_actions) and actions.FUNCTIONS.Attack_screen.id in self.available_actions:
             raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.Attack_screen.id, [[0],[action[0],action[1]]])])
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
+            raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
         else:
             raw_obs = self.env.step([actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])])
         raw_obs = raw_obs[0]
@@ -67,8 +71,9 @@ class DZBEnv(gym.Env):
 
         done = False
         if self.num_steps == 50:
-            obs = self.reset()
+            self.num_steps = 0
             done = True
+        
 
         return self.get_obs(raw_obs), raw_obs.reward, done, {}  # return obs, reward and whether episode ends
 
@@ -79,6 +84,7 @@ class DZBEnv(gym.Env):
         raw_obs = self.env.reset()[0] # 0-indexed because raw_obs is tuple for no reason
         self.available_actions = raw_obs.observation["available_actions"]
         self.num_steps = 0
+        self.env.step([actions.FunctionCall(actions.FUNCTIONS.select_army.id, [[0]])])        
         '''
         for action in raw_obs.observation.available_actions:
             print(actions.FUNCTIONS[action])
