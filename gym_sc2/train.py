@@ -45,9 +45,13 @@ if __name__ == '__main__':
             # Re-ordering will be done by pre-preprocessing or wrapper
             n_input_channels = observation_space.shape[0]
             self.cnn = nn.Sequential(
-                nn.Conv2d(n_input_channels, 3, kernel_size=5, stride=2, padding=0),
+                nn.Conv2d(n_input_channels, 6, kernel_size=3, stride=2, padding=0),
+                nn.Dropout(p=0.3),
+                nn.BatchNorm2d(num_features=6),
                 nn.ReLU(),
-                nn.Conv2d(3, 3, kernel_size=5, stride=2, padding=0),
+                nn.Conv2d(6, 12, kernel_size=3, stride=1, padding=0),
+                nn.Dropout(p=0.3),
+                nn.BatchNorm2d(num_features=12),
                 nn.ReLU(),
                 nn.Flatten(),
             )
@@ -65,13 +69,14 @@ if __name__ == '__main__':
 
     policy_kwargs = dict(
         features_extractor_class=CustomCNN,
-        features_extractor_kwargs=dict(features_dim=64),
+        features_extractor_kwargs=dict(features_dim=32),
     )
-    
+    # MLP Policy
+    '''
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      net_arch=[256, 256])
-
-    model = A2C('MlpPolicy', env, verbose=0, tensorboard_log="log/", n_steps=5, learning_rate=0.0001, policy_kwargs=policy_kwargs)
+    '''
+    model = A2C('CnnPolicy', env, verbose=0, tensorboard_log="log/", n_steps=5, learning_rate=0.0001, policy_kwargs=policy_kwargs)
     model.learn(total_timesteps=int(100000), tb_log_name="first_run")
     print("Training finished")
 
@@ -90,7 +95,8 @@ if __name__ == '__main__':
 
     total_reward = 0
     while not done:
-        action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
+        #action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
+        action, _state = model.predict(np.array(obs))
         obs, reward, done, info = env.step(action)
         total_reward += reward
         env.render()
