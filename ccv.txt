@@ -1,0 +1,24 @@
+srun -c 2 --mem=20G --gres=gpu:1 -t 1-0 --partition=gpu --pty bash
+
+singularity shell --nv -B /users/hahn19:/users/hahn19 /users/hahn19/cs2951/CSCI2951F.simg
+
+sshcampus.brown.edu
+
+azimuth rotational angle
+
+crossing over the y = 0 line will fip the camera's azimuth
+
+try assign velocity vector to the view.cam.lookat -> see if without computing azimuth? and elevation?, it gets rendering that works
+
+Make camera azimuth proper when it crosses y=0 line multiple times
+
+
+when camera setting is set to "camera.tracking," azimuth is with respect to the camera instead of where the camera is looking at!!!
+
+viewer.cam.distance = distance of the camera from where the camera is looking at (it's like a radius) and changing the azimuth will rotate the camera position around where it's looking at with this distance. Like a circle
+
+singularity shell --nv -B /gpfs/data/ugur/hahn:/gpfs/data/ugur/hahn /gpfs/data/ugur/amir/containers/CSCI2951F.simg
+
+singularity shell --nv -B /gpfs/data/ugur/hahn:/gpfs/data/ugur/hahn /gpfs/data/ugur/CSCI2951F.simg
+
+sameer@kaisura.com
