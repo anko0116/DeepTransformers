@@ -45,13 +45,17 @@ if __name__ == '__main__':
             # Re-ordering will be done by pre-preprocessing or wrapper
             n_input_channels = observation_space.shape[0]
             self.cnn = nn.Sequential(
-                nn.Conv2d(n_input_channels, 6, kernel_size=3, stride=2, padding=0),
-                nn.Dropout(p=0.3),
-                nn.BatchNorm2d(num_features=6),
+                nn.Conv2d(n_input_channels, 3, kernel_size=3, stride=1, padding=1),
+                nn.Dropout(p=0.2),
+                nn.BatchNorm2d(num_features=3),
                 nn.ReLU(),
-                nn.Conv2d(6, 12, kernel_size=3, stride=1, padding=0),
-                nn.Dropout(p=0.3),
-                nn.BatchNorm2d(num_features=12),
+                nn.Conv2d(3, 3, kernel_size=3, stride=2, padding=0),
+                nn.Dropout(p=0.2),
+                nn.BatchNorm2d(num_features=3),
+                nn.ReLU(),
+                nn.Conv2d(3, 3, kernel_size=3, stride=2, padding=0),
+                nn.Dropout(p=0.2),
+                nn.BatchNorm2d(num_features=3),
                 nn.ReLU(),
                 nn.Flatten(),
             )
@@ -62,42 +66,43 @@ if __name__ == '__main__':
                     th.as_tensor(observation_space.sample()[None]).float()
                 ).shape[1]
 
-            self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+            self.linear = nn.Sequential(nn.Linear(n_flatten, 128), nn.ReLU())
+            self.linear = nn.Sequential(nn.Linear(n_flatten, 32), nn.ReLU())
 
         def forward(self, observations: th.Tensor) -> th.Tensor:
             return self.linear(self.cnn(observations))
 
+    '''
     policy_kwargs = dict(
         features_extractor_class=CustomCNN,
         features_extractor_kwargs=dict(features_dim=32),
     )
+    '''
     # MLP Policy
-    '''
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                     net_arch=[256, 256])
-    '''
-    model = A2C('CnnPolicy', env, verbose=0, tensorboard_log="log/", n_steps=20, learning_rate=0.0001, policy_kwargs=policy_kwargs)
-    model.learn(total_timesteps=int(200000), tb_log_name="first_run")
+                     net_arch=[256, 128, 64])
+    model = A2C('MlpPolicy', env, verbose=0, tensorboard_log="log/", n_steps=50, learning_rate=0.0005, policy_kwargs=policy_kwargs)
+    model_name = "model/mlp-256-128-64"
+    model.learn(total_timesteps=int(100000), tb_log_name="first_run")
     print("Training finished")
 
 
     # Save model
     if not os.path.exists("./model"):
         os.makedirs("./model")
-    model.save("model/dbz_a2c_cnn_drpout_batchnorm")
+    model.save(model_name)
+    model.load(model_name)
+    env = gym.make('defeat-zerglings-banelings-v0')
 
     all_rewards = []
     for i in range(10):
-        # Test model for 1 episode
-        model.load("model/dbz_ppo")
-        env = gym.make('defeat-zerglings-banelings-v0')
         obs = env.reset()
         done = False
 
         total_reward = 0
         while not done:
-            #action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
-            action, _state = model.predict(np.array(obs))
+            action, _state = model.predict(np.reshape(np.array(obs), (1,7056)))
+            #action, _state = model.predict(np.array(obs))
             obs, reward, done, info = env.step(action)
             total_reward += reward
             
