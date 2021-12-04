@@ -45,8 +45,8 @@ class DZBEnv(gym.Env):
         #self.action_space = spaces.Box(low=1.0, high=84.0, shape=(2,), dtype=np.float32) # Coordinates of Attack
         self.action_space = spaces.MultiDiscrete([83,83])
         # [0: x, 1: y, 2: hp]
-        self.image_shape = (1, 84, 84) # for CNN
-        #self.image_shape = (1, 7056) # for MLP
+        #self.image_shape = (1, 84, 84) # for CNN
+        self.image_shape = (1, 7056) # for MLP
         self.observation_space = spaces.Box(
             low=0,
             high=255,
